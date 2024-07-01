@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>New Bedford City Codes AI search</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <header>
+    <div class="header-content">
+        <img src="logo.png" alt="Logo">
+        <h1>New Bedford Databases AI Search:</h1>
+    </div>
+    <div class="menu-container">
+        <div class="menu-icon">☰</div>
+        <div class="menu-dropdown">
+            <a href="choose-database.html">Choose Database</a>
+            <a href="help.html">Help</a>
+            <a href="settings.html">Settings</a>
+        </div>
+    </div>
+</header>
+<main>
+    <div class="search-container">
+        <input type="text" id="search-input" placeholder="Search...">
+        <img src="Go-logo.png" alt="Search" class="search-logo">
+    </div>
+<div class="database-container">
+    <h2>Database Connection</h2>
+    <label for="database-url">Database URL:</label>
+    <input type="text" id="database-url" placeholder="Enter database URL">
+    <button id="connect-button">Connect</button>
+    <p id="connection-status"></p>
+</div>
+
+<div class="api-container">
+    <h2>API Integration</h2>
+    <label for="api-key">API Key:</label>
+    <input type="text" id="api-key" placeholder="Enter API key">
+    <button id="save-key-button">Save</button>
+    <p id="api-status"></p>
+</div>
+</main>
+    <script src="script.js"></script>
+</body>
+</html>
+
+
+
+
+
+
+
