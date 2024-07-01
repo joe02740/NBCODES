@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import ChatInterface from './ChatInterface';
 
 function SearchResults({ results }) {
+  console.log('Search results:', results);
   const [explanations, setExplanations] = useState({});
   const [expandedResults, setExpandedResults] = useState({});
   const [chatOpen, setChatOpen] = useState({});
@@ -53,6 +54,7 @@ function SearchResults({ results }) {
         results.map((result) => (
           <div key={result.NodeId} className="result-item">
             <h3>{result.Title}</h3>
+            {result.Subtitle && <h4>{result.Subtitle}</h4>}
             <p>
               {expandedResults[result.NodeId] 
                 ? result.Content 
@@ -71,7 +73,7 @@ function SearchResults({ results }) {
             )}
             {chatOpen[result.NodeId] && (
               <ChatInterface 
-                initialContext={`${result.Title}\n${result.Content}`}
+                initialContext={`${result.Title}\n${result.Subtitle ? result.Subtitle + '\n' : ''}${result.Content}`}
                 explanation={explanations[result.NodeId]}
               />
             )}
