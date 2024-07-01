@@ -16,29 +16,38 @@ function ChatInterface({ initialContext, explanation }) {
 
   const sendMessage = async () => {
     if (inputMessage.trim() === '') return;
-
+  
     setMessages(prev => [...prev, { text: inputMessage, sender: 'user' }]);
-
+  
     try {
       const response = await fetch('http://localhost:5000/chat', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        },
         body: JSON.stringify({ 
           message: inputMessage, 
           context: initialContext 
         }),
       });
+  
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
+  
       const data = await response.json();
-
+  
+      if (data.error) {
+        throw new Error(data.error);
+      }
+  
       setMessages(prev => [...prev, { text: data.response, sender: 'ai' }]);
     } catch (error) {
       console.error('Error sending message:', error);
-      setMessages(prev => [...prev, { text: "Sorry, I couldn't process your request.", sender: 'ai' }]);
+      setMessages(prev => [...prev, { text: `Error: ${error.message}`, sender: 'ai' }]);
     }
-
+  
     setInputMessage('');
   };
 

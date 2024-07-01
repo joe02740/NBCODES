@@ -3,20 +3,25 @@ from flask_cors import CORS
 from pymongo import MongoClient
 import certifi
 import os
+from anthropic import Anthropic 
 import anthropic
 from dotenv import load_dotenv
 
 load_dotenv()
 
 app = Flask(__name__)
-app = Flask(__name__)
-CORS(app, resources={r"/*": {"origins": "http://localhost:3000", "methods": ["GET", "POST", "OPTIONS"], "allow_headers": ["Content-Type"]}})
+CORS(app, resources={r"/*": {"origins": "*", "methods": ["GET", "POST", "OPTIONS"], "allow_headers": ["Content-Type", "Authorization"]}})
+
 
 # Initialize the Anthropic client
 client = anthropic.Anthropic(api_key=os.environ.get("ANTHROPIC_API_KEY"))
 
+#MONGODB Connection string
+connection_string = os.getenv('MONGODB_URI')
+
+
 # MongoDB connection
-connection_string = 'mongodb+srv://joseph1914:NewBed777%24%24%24@cluster0.9tp0idi.mongodb.net/joseph1914?retryWrites=true&w=majority'
+connection_string = os.getenv('MONGODB_URI')
 mongo_client = MongoClient(connection_string, tlsCAFile=certifi.where())
 db = mongo_client.joseph1914
 collection = db.NBCODES
@@ -34,6 +39,10 @@ def search():
             {"$text": {"$search": query}},
             {"NodeId": 1, "Title": 1, "Content": 1, "Subtitle": 1, "_id": 0}
         ).limit(10))
+        
+        if not results:
+            return jsonify({"message": "No results found for your search query."}), 404
+        
         return jsonify(results)
     except Exception as e:
         print(f"Search error: {e}")
@@ -45,17 +54,18 @@ def ai_explain():
     query = data.get('query')
     context = data.get('context')
 
-    prompt = f"Human: Explain the following New Bedford city code in simple terms: {context}\n\nUser query: {query}\n\nAssistant:"
-
     try:
-        response = client.completions.create(
-            model="claude-2.1",
-            prompt=prompt,
-            max_tokens_to_sample=300
+        message = client.messages.create(
+            model="claude-3-opus-20240229",
+            max_tokens=1000,
+            messages=[
+                {"role": "user", "content": f"Explain the following New Bedford city code in simple terms: {context}\n\nUser query: {query}"}
+            ]
         )
-        explanation = response.completion
+        explanation = message.content[0].text
         return jsonify({"explanation": explanation})
     except Exception as e:
+        print(f"Error in ai_explain: {str(e)}")
         return jsonify({"error": str(e)}), 500
 
 @app.route('/test', methods=['GET'])
@@ -67,46 +77,41 @@ def test():
         print(f"Test error: {e}")
         return jsonify({"error": str(e)}), 500
     
-@app.route('/search', methods=['GET'])
-def search():
-    try:
-        query = request.args.get('q', '')
-        results = list(collection.find(
-            {"$text": {"$search": query}},
-            {"NodeId": 1, "Title": 1, "Content": 1, "Subtitle": 1, "_id": 0}
-        ).limit(10))
-        
-        if not results:
-            return jsonify({"message": "No results found for your search query."}), 404
-        
-        return jsonify(results)
-    except Exception as e:
-        print(f"Search error: {e}")
-        return jsonify({"error": str(e)}), 500
 
 
-    
-@app.route('/chat', methods=['POST'])
+
+@app.route('/chat', methods=['POST', 'OPTIONS'])
 def chat():
+    if request.method == "OPTIONS":
+        return {"message": "OK"}, 200
+    
+    print("Chat endpoint accessed")
+    
     data = request.json
     user_message = data.get('message')
     context = data.get('context')
 
-    # Construct the prompt for the AI
-    prompt = f"Human: Context: {context}\n\nHuman: {user_message}\n\nAssistant:"
+    print(f"Received message: {user_message}")
+    print(f"Context: {context}")
 
     try:
-        response = client.completions.create(
-            model="claude-2.1",
-            prompt=prompt,
-            max_tokens_to_sample=300
+        print("Attempting to create message with Anthropic API")
+        message = client.messages.create(
+            model="claude-3-opus-20240229",
+            max_tokens=1000,
+            messages=[
+                {"role": "user", "content": f"Context: {context}\n\nHuman: {user_message}"}
+            ]
         )
-        ai_response = response.completion
-
+        print("Successfully created message with Anthropic API")
+        
+        ai_response = message.content[0].text
+        print(f"AI Response: {ai_response[:100]}...")
+        
         return jsonify({"response": ai_response})
     except Exception as e:
-        print(f"Error in chat: {e}")
+        print(f"Error in chat: {str(e)}")
         return jsonify({"error": str(e)}), 500
-
+    
 if __name__ == '__main__':
     app.run(debug=True)
