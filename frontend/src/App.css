@@ -129,3 +129,22 @@ body {
   color: var(--primary-blue);
   margin-bottom: 5px;
 }
+.App-header {
+  background-color: #0056b3;
+  color: white;
+  padding: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.city-seal {
+  width: 128;
+  height: 128px;
+  margin-right: 20px;
+}
+
+.App-header h1 {
+  margin: 0;
+  font-size: 24px;
+}
