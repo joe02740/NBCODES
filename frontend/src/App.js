@@ -5,7 +5,7 @@ import logo from './logo.png'; // Make sure this path is correct
 import './App.css';
 
 function App() {
-  const [results, setResults] = useState([]);
+  const [results, setResults] = useState(null);  // Initialize with null instead of []
 
   return (
     <div className="App">

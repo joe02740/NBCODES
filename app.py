@@ -40,8 +40,7 @@ def search():
             {"NodeId": 1, "Title": 1, "Content": 1, "Subtitle": 1, "_id": 0}
         ).limit(10))
         
-        if not results:
-            return jsonify({"message": "No results found for your search query."}), 404
+
         
         return jsonify(results)
     except Exception as e:

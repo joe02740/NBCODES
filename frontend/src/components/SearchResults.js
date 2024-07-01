@@ -46,11 +46,19 @@ function SearchResults({ results }) {
     }));
   };
 
+  // Check if a search has been performed
+  const searchPerformed = results !== null;
+
   return (
     <div className="search-results">
-      {results.length === 0 ? (
+      {!searchPerformed ? (
+        // Display nothing or a welcome message when no search has been performed
+        <p>Enter a search term to find relevant New Bedford city codes.</p>
+      ) : results.length === 0 ? (
+        // Display this only when a search was performed but returned no results
         <p>No results found for your search query.</p>
       ) : (
+        // Display search results
         results.map((result) => (
           <div key={result.NodeId} className="result-item">
             <h3>{result.Title}</h3>
