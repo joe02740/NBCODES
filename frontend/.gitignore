@@ -21,3 +21,32 @@
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+
+
+# Python & Flask
+*.pyc
+instance/
+.pytest_cache/
+.coverage
+htmlcov/
+
+# React
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Heroku
+*.env
+.env.*
+!.env.example
+
+# Vercel
+.vercel
+
+# MongoDB
+*.mongodb
+
+# Misc
+*.bak
+*.swp
+*.swo
