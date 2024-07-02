@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import './ChatInterface.css'; // We'll create this file for styling
+import './ChatInterface.css'; // Make sure this file exists
 
 function ChatInterface({ initialContext, explanation }) {
   const [messages, setMessages] = useState([
@@ -20,7 +20,7 @@ function ChatInterface({ initialContext, explanation }) {
     setMessages(prev => [...prev, { text: inputMessage, sender: 'user' }]);
   
     try {
-      const response = await fetch('http://localhost:5000/chat', {
+      const response = await fetch(`${process.env.REACT_APP_API_URL}/chat`, {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',

@@ -1,19 +1,36 @@
-const fetchAIExplanation = async (query, context) => {
-  try {
-    const response = await fetch(`${process.env.REACT_APP_API_URL}/ai_explain`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ query, context }),
-    });
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
-    const data = await response.json();
-    return data.explanation;
-  } catch (error) {
-    console.error("Error fetching AI explanation:", error);
-    return "Unable to fetch explanation at this time.";
-  }
-};
+import React, { useState } from 'react';
+import ChatInterface from './ChatInterface';
+
+function SearchResults({ results }) {
+  const [selectedResult, setSelectedResult] = useState(null);
+
+  const fetchAIExplanation = async (query, context) => {
+    // ... your existing fetchAIExplanation function
+  };
+
+  const handleResultClick = async (result) => {
+    const explanation = await fetchAIExplanation(result.Title, result.Content);
+    setSelectedResult({ ...result, explanation });
+  };
+
+  if (!results) return null;
+
+  return (
+    <div className="search-results">
+      {results.map((result, index) => (
+        <div key={index} onClick={() => handleResultClick(result)}>
+          <h3>{result.Title}</h3>
+          <p>{result.Content.substring(0, 100)}...</p>
+        </div>
+      ))}
+      {selectedResult && (
+        <ChatInterface 
+          initialContext={selectedResult.Content} 
+          explanation={selectedResult.explanation} 
+        />
+      )}
+    </div>
+  );
+}
+
+export default SearchResults;
