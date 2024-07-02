@@ -6,7 +6,7 @@ function SearchForm({ setResults }) {
   const handleSearch = async (e) => {
     e.preventDefault();
     try {
-      console.log(`Sending request to: `${process.env.REACT_APP_API_URL}/search?q=${query}`);
+      console.log(`Sending request to: ${process.env.REACT_APP_API_URL}/search?q=${query}`);
       const response = await fetch(`${process.env.REACT_APP_API_URL}/search?q=${query}`);
       console.log('Response status:', response.status);
       console.log('Response headers:', response.headers);
