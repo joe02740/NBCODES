@@ -12,7 +12,7 @@ load_dotenv()
 
 
 app = Flask(__name__)
-CORS(app, resources={r"/*": {"origins": "https://nbcodes-42q1y3f82-josephs-projects-45363c9f.vercel.app"}})
+CORS(app, resources={r"/*": {"origins": ["https://nbcodes-qeq1rll2l-josephs-projects-45363c9f.vercel.app", "https://nbcodes.vercel.app"]}})
 
 
 # Initialize the Anthropic client
