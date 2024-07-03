@@ -9,11 +9,10 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-from flask import Flask
-from flask_cors import CORS
+
 
 app = Flask(__name__)
-CORS(app, resources={r"/*": {"origins": "https://nbcodes.vercel.app"}})
+CORS(app, resources={r"/*": {"origins": "https://nbcodes-42q1y3f82-josephs-projects-45363c9f.vercel.app"}})
 
 
 # Initialize the Anthropic client
