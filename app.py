@@ -12,7 +12,7 @@ load_dotenv()
 
 
 app = Flask(__name__)
-CORS(app, resources={r"/*": {"origins": os.getenv('CORS_ORIGIN', '*').split(',')}})
+CORS(app, resources={r"/*": {"origins": "*"}})
 
 
 # Initialize the Anthropic client
