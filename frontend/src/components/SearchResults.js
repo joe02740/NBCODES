@@ -1,17 +1,9 @@
 import React, { useState } from 'react';
 import ChatInterface from './ChatInterface';
 
-
-
-
-
-
-
 function SearchResults({ results }) {
   console.log('Search results:', results);
-  if (results === null || results === undefined) {
-    return <p>Enter a search term to see results.</p>;
-  }
+
   const [explanations, setExplanations] = useState({});
   const [expandedResults, setExpandedResults] = useState({});
   const [chatOpen, setChatOpen] = useState({});
@@ -55,11 +47,13 @@ function SearchResults({ results }) {
     }));
   };
 
+  if (!results) {
+    return <p>Enter a search term to see results.</p>;
+  }
+
   return (
     <div className="search-results">
-      {!Array.isArray(results) ? (
-        <p>Enter a search term to see results.</p>
-      ) : results.length === 0 ? (
+      {results.length === 0 ? (
         <p>No results found for your search query.</p>
       ) : (
         results.map((result) => (
@@ -94,3 +88,5 @@ function SearchResults({ results }) {
     </div>
   );
 }
+
+export default SearchResults;
