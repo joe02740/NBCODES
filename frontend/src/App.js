@@ -21,7 +21,7 @@ function App() {
         <SearchResults results={results} />
       </main>
       <footer>
-        <p>&copy; 2024 City of New Bedford</p>
+      <a href="https://github.com/joe02740/NBCODES/blob/5b83e7492fcba59d1041d2d4be139a04a8a6b89b/frontend/README.md" className="contact-link">Readme</a>
       </footer>
     </div>
   );
