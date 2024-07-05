@@ -12,8 +12,7 @@ load_dotenv()
 
 
 app = Flask(__name__)
-CORS(app, resources={r"/*": {"origins": "https://nbcodes.netlify.app"}})
-
+CORS(app, resources={r"/*": {"origins": ["https://nbcodes.netlify.app", "https://nbcodes.com", "https://www.nbcodes.com"]}})
 
 # Initialize the Anthropic client
 client = anthropic.Anthropic(api_key=os.environ.get("ANTHROPIC_API_KEY"))
