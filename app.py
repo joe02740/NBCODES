@@ -59,7 +59,7 @@ def ai_explain():
             model="claude-3-opus-20240229",
             max_tokens=700,
             messages=[
-                {"role": "user", "content": f"Explain the following New Bedford city code in very simple and polite terms and from the perspective of an empathatic city employee and resident <3: {context}\n\nUser query: {query}"}
+                {"role": "user", "content": f"Explain the following New Bedford city code in very simple and polite terms with an empathatic and balanced tone: {context}\n\nUser query: {query}"}
             ]
         )
         explanation = message.content[0].text
