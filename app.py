@@ -57,9 +57,9 @@ def ai_explain():
     try:
         message = client.messages.create(
             model="claude-3-opus-20240229",
-            max_tokens=1000,
+            max_tokens=700,
             messages=[
-                {"role": "user", "content": f"Explain the following New Bedford city code in simple terms: {context}\n\nUser query: {query}"}
+                {"role": "user", "content": f"Explain the following New Bedford city code in very simple and polite terms and from the perspective of an empathatic city employee and resident <3: {context}\n\nUser query: {query}"}
             ]
         )
         explanation = message.content[0].text
@@ -98,7 +98,7 @@ def chat():
         print("Attempting to create message with Anthropic API")
         message = client.messages.create(
             model="claude-3-opus-20240229",
-            max_tokens=1000,
+            max_tokens=777,
             messages=[
                 {"role": "user", "content": f"Context: {context}\n\nHuman: {user_message}"}
             ]
