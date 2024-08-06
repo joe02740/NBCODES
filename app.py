@@ -5,21 +5,19 @@ import certifi
 import os
 from anthropic import Anthropic 
 import anthropic
+from openai import OpenAI
 from dotenv import load_dotenv
 
 load_dotenv()
-
-
 
 app = Flask(__name__)
 CORS(app, resources={r"/*": {"origins": ["https://nbcodes.netlify.app", "https://nbcodes.com", "https://www.nbcodes.com"]}})
 
 # Initialize the Anthropic client
-client = anthropic.Anthropic(api_key=os.environ.get("ANTHROPIC_API_KEY"))
+anthropic_client = anthropic.Anthropic(api_key=os.environ.get("ANTHROPIC_API_KEY"))
 
-#MONGODB Connection string
-connection_string = os.getenv('MONGODB_URI')
-
+# Initialize the OpenAI client
+openai_client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
 
 # MongoDB connection
 connection_string = os.getenv('MONGODB_URI')
@@ -31,18 +29,37 @@ collection = db.NBCODES
 def home():
     return "Hello, World!"
 
-
 @app.route('/search', methods=['GET'])
 def search():
     try:
         query = request.args.get('q', '')
-        results = list(collection.find(
-            {"$text": {"$search": query}},
-            {"NodeId": 1, "Title": 1, "Content": 1, "Subtitle": 1, "_id": 0}
-        ).limit(10))
         
+        # Create embedding for the query
+        response = openai_client.embeddings.create(
+            input=query,
+            model="text-embedding-ada-002"
+        )
+        query_embedding = response.data[0].embedding
 
-        
+        # Perform semantic search using the embedding
+        results = list(collection.aggregate([
+            {
+                "$search": {
+                    "knnBeta": {
+                        "vector": query_embedding,
+                        "path": "embedding",
+                        "k": 10
+                    }
+                }
+            },
+            {
+                "$project": {
+                    "NodeId": 1, "Title": 1, "Content": 1, "Subtitle": 1,
+                    "score": {"$meta": "searchScore"}
+                }
+            }
+        ]))
+
         return jsonify(results)
     except Exception as e:
         print(f"Search error: {e}")
@@ -55,11 +72,11 @@ def ai_explain():
     context = data.get('context')
 
     try:
-        message = client.messages.create(
-            model="claude-3-opus-20240229",
-            max_tokens=700,
+        message = anthropic_client.messages.create(
+            model="claude-3-5-sonnet-20240620",
+            max_tokens=444,
             messages=[
-                {"role": "user", "content": f"Explain the following New Bedford city code in very simple and polite terms with an empathatic and balanced tone: {context}\n\nUser query: {query}"}
+                {"role": "user", "content": f"Please simplify the New Bedford MA city code and put it in every day language where possible: {context}\n\nUser query: {query}"}
             ]
         )
         explanation = message.content[0].text
@@ -76,9 +93,52 @@ def test():
     except Exception as e:
         print(f"Test error: {e}")
         return jsonify({"error": str(e)}), 500
-    
 
-
+@app.route('/table_of_contents', methods=['GET'])
+def get_table_of_contents():
+    try:
+        pipeline = [
+            {"$sort": {"Chapter": 1, "Section": 1, "Subsection": 1}},
+            {"$group": {
+                "_id": {
+                    "Chapter": "$Chapter",
+                    "Section": "$Section",
+                    "Subsection": "$Subsection"
+                },
+                "items": {
+                    "$push": {
+                        "NodeId": "$NodeId",
+                        "Title": "$Title",
+                        "Subtitle": "$Subtitle"
+                    }
+                }
+            }},
+            {"$group": {
+                "_id": {"Chapter": "$_id.Chapter", "Section": "$_id.Section"},
+                "subsections": {
+                    "$push": {
+                        "Subsection": "$_id.Subsection",
+                        "items": "$items"
+                    }
+                }
+            }},
+            {"$group": {
+                "_id": "$_id.Chapter",
+                "sections": {
+                    "$push": {
+                        "Section": "$_id.Section",
+                        "subsections": "$subsections"
+                    }
+                }
+            }},
+            {"$sort": {"_id": 1}}
+        ]
+        
+        toc = list(collection.aggregate(pipeline))
+        return jsonify(toc)
+    except Exception as e:
+        print(f"Table of Contents error: {e}")
+        return jsonify({"error": str(e)}), 500
 
 @app.route('/chat', methods=['POST', 'OPTIONS'])
 def chat():
@@ -96,7 +156,7 @@ def chat():
 
     try:
         print("Attempting to create message with Anthropic API")
-        message = client.messages.create(
+        message = anthropic_client.messages.create(
             model="claude-3-opus-20240229",
             max_tokens=777,
             messages=[
@@ -112,6 +172,6 @@ def chat():
     except Exception as e:
         print(f"Error in chat: {str(e)}")
         return jsonify({"error": str(e)}), 500
-    
+
 if __name__ == '__main__':
     app.run(debug=True)
