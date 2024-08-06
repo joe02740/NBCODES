@@ -24,7 +24,7 @@ connection_string = os.getenv('MONGODB_URI')
 # MongoDB connection
 connection_string = os.getenv('MONGODB_URI')
 mongo_client = MongoClient(connection_string, tlsCAFile=certifi.where())
-db = mongo_client.joseph1914
+db = mongo_client.NBCODES
 collection = db.NBCODES
 
 @app.route('/', methods=['GET'])
