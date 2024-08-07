@@ -62,12 +62,21 @@ def search():
             }
         ]))
         
-        print(f"Found {len(results)} results")
+        print(f"Found {len(results)} results with semantic search")
+
+        # If no results, fall back to text search
+        if len(results) == 0:
+            print("No semantic results, falling back to text search")
+            results = list(collection.find(
+                {"$text": {"$search": query}},
+                {"NodeId": 1, "Title": 1, "Content": 1, "Subtitle": 1, "_id": 0}
+            ).limit(10))
+            print(f"Found {len(results)} results with text search")
+
         return jsonify(results)
     except Exception as e:
         print(f"Search error: {e}")
         return jsonify({"error": str(e)}), 500
-
 @app.route('/ai_explain', methods=['POST'])
 def ai_explain():
     data = request.json
@@ -142,6 +151,24 @@ def get_table_of_contents():
     except Exception as e:
         print(f"Table of Contents error: {e}")
         return jsonify({"error": str(e)}), 500
+
+
+
+
+
+@app.route('/check_embeddings', methods=['GET'])
+def check_embeddings():
+    try:
+        doc_count = collection.count_documents({})
+        docs_with_embeddings = collection.count_documents({"embedding": {"$exists": True}})
+        return jsonify({
+            "total_documents": doc_count,
+            "documents_with_embeddings": docs_with_embeddings
+        })
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+    
+
 
 @app.route('/chat', methods=['POST', 'OPTIONS'])
 def chat():
