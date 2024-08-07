@@ -62,9 +62,10 @@ def search():
         return jsonify(results)
     except Exception as e:
         print(f"Search error: {e}")
-        return jsonify({"error": str(e)}), 500@app.route('/ai_explain', methods=['POST'])
-
-
+        return jsonify({"error": str(e)}), 500
+    
+    
+@app.route('/ai_explain', methods=['POST'])
 def ai_explain():
     data = request.json
     query = data.get('query')
