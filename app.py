@@ -35,22 +35,14 @@ def search():
         query = request.args.get('q', '')
         print(f"Received search query: {query}")
         
-        # Create embedding for the query
-        response = openai_client.embeddings.create(
-            input=query,
-            model="text-embedding-ada-002"
-        )
-        query_embedding = response.data[0].embedding
-        print("Created embedding for query")
-
-        # Perform semantic search using the embedding
+        # Perform semantic search using MongoDB's vector search
         results = list(collection.aggregate([
             {
                 "$search": {
-                    "knnBeta": {
-                        "vector": query_embedding,
-                        "path": "embedding",
-                        "k": 10
+                    "index": "vector_index1",  # Make sure this matches your index name
+                    "text": {
+                        "query": query,
+                        "path": ["Title", "Subtitle", "Content"]
                     }
                 }
             },
@@ -59,25 +51,20 @@ def search():
                     "NodeId": 1, "Title": 1, "Content": 1, "Subtitle": 1,
                     "score": {"$meta": "searchScore"}
                 }
+            },
+            {
+                "$limit": 10
             }
         ]))
         
         print(f"Found {len(results)} results with semantic search")
 
-        # If no results, fall back to text search
-        if len(results) == 0:
-            print("No semantic results, falling back to text search")
-            results = list(collection.find(
-                {"$text": {"$search": query}},
-                {"NodeId": 1, "Title": 1, "Content": 1, "Subtitle": 1, "_id": 0}
-            ).limit(10))
-            print(f"Found {len(results)} results with text search")
-
         return jsonify(results)
     except Exception as e:
         print(f"Search error: {e}")
-        return jsonify({"error": str(e)}), 500
-@app.route('/ai_explain', methods=['POST'])
+        return jsonify({"error": str(e)}), 500@app.route('/ai_explain', methods=['POST'])
+
+
 def ai_explain():
     data = request.json
     query = data.get('query')
