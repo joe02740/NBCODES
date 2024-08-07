@@ -33,6 +33,7 @@ def home():
 def search():
     try:
         query = request.args.get('q', '')
+        print(f"Received search query: {query}")
         
         # Create embedding for the query
         response = openai_client.embeddings.create(
@@ -40,6 +41,7 @@ def search():
             model="text-embedding-ada-002"
         )
         query_embedding = response.data[0].embedding
+        print("Created embedding for query")
 
         # Perform semantic search using the embedding
         results = list(collection.aggregate([
@@ -59,7 +61,8 @@ def search():
                 }
             }
         ]))
-
+        
+        print(f"Found {len(results)} results")
         return jsonify(results)
     except Exception as e:
         print(f"Search error: {e}")
