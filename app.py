@@ -34,49 +34,38 @@ def search():
     try:
         query = request.args.get('q', '')
         print(f"Received search query: {query}")
-        
-        # Create embedding for the query
-        response = openai_client.embeddings.create(
-            input=query,
-            model="text-embedding-ada-002"
-        )
-        query_embedding = response.data[0].embedding
 
-        # Perform semantic search using the embedding
+        # Perform text search using Atlas Search
         results = list(collection.aggregate([
             {
                 "$search": {
-                    "index": "vector_index1",  # Make sure this matches your index name
-                    "knnBeta": {
-                        "vector": query_embedding,
-                        "path": "embedding",
-                        "k": 10
+                    "index": "default",
+                    "text": {
+                        "query": query,
+                        "path": ["NodeId", "Title", "Subtitle", "Content"]
                     }
                 }
             },
             {
                 "$project": {
-                    "NodeId": 1, "Title": 1, "Content": 1, "Subtitle": 1,
+                    "NodeId": 1,
+                    "Title": 1,
+                    "Content": 1,
+                    "Subtitle": 1,
                     "score": {"$meta": "searchScore"}
                 }
+            },
+            {
+                "$limit": 10
             }
         ]))
-        
-        print(f"Found {len(results)} results with vector search")
 
-        if not results:
-            # Fallback to simple text search if vector search returns no results
-            results = list(collection.find(
-                {"$text": {"$search": query}},
-                {"NodeId": 1, "Title": 1, "Content": 1, "Subtitle": 1, "score": {"$meta": "textScore"}}
-            ).sort([("score", {"$meta": "textScore"})]).limit(10))
-            print(f"Found {len(results)} results with text search")
-
+        print(f"Found {len(results)} results with text search")
         return jsonify(results)
+
     except Exception as e:
         print(f"Search error: {e}")
         return jsonify({"error": str(e)}), 500
-
 
 
 @app.route('/ai_explain', methods=['POST'])
