@@ -35,14 +35,14 @@ def search():
         query = request.args.get('q', '')
         print(f"Received search query: {query}")
 
-        # Perform text search using Atlas Search
+        # Use the existing 'default' index for text search
         results = list(collection.aggregate([
             {
                 "$search": {
                     "index": "default",
                     "text": {
                         "query": query,
-                        "path": ["NodeId", "Title", "Subtitle", "Content"]
+                        "path": {"wildcard": "*"}  # This will search all text fields
                     }
                 }
             },
