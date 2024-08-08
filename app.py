@@ -7,6 +7,9 @@ from anthropic import Anthropic
 import anthropic
 from openai import OpenAI
 from dotenv import load_dotenv
+from bson import json_util
+import json
+
 
 load_dotenv()
 
@@ -35,14 +38,14 @@ def search():
         query = request.args.get('q', '')
         print(f"Received search query: {query}")
 
-        # Use the existing 'default' index for text search
-        results = list(collection.aggregate([
+        # Attempt Atlas Search
+        atlas_results = list(collection.aggregate([
             {
                 "$search": {
                     "index": "default",
                     "text": {
                         "query": query,
-                        "path": {"wildcard": "*"}  # This will search all text fields
+                        "path": {"wildcard": "*"}
                     }
                 }
             },
@@ -60,12 +63,48 @@ def search():
             }
         ]))
 
-        print(f"Found {len(results)} results with text search")
-        return jsonify(results)
+        print(f"Atlas Search results: {json.dumps(atlas_results, default=json_util.default)}")
+
+        # If Atlas Search returns no results, try a simple text search
+        if not atlas_results:
+            print("Atlas Search returned no results. Trying simple text search.")
+            simple_results = list(collection.find(
+                {"$text": {"$search": query}},
+                {"NodeId": 1, "Title": 1, "Content": 1, "Subtitle": 1, "score": {"$meta": "textScore"}}
+            ).sort([("score", {"$meta": "textScore"})]).limit(10))
+            
+            print(f"Simple text search results: {json.dumps(simple_results, default=json_util.default)}")
+            
+            if simple_results:
+                return jsonify(simple_results)
+
+        return jsonify(atlas_results)
 
     except Exception as e:
         print(f"Search error: {e}")
         return jsonify({"error": str(e)}), 500
+
+@app.route('/test_connection', methods=['GET'])
+def test_connection():
+    try:
+        # Test the connection and print database info
+        db_names = mongo_client.list_database_names()
+        collection_names = db.list_collection_names()
+        doc_count = collection.count_documents({})
+        
+        return jsonify({
+            "databases": db_names,
+            "collections": collection_names,
+            "document_count": doc_count
+        })
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+
+
+
+
 
 
 @app.route('/ai_explain', methods=['POST'])
