@@ -35,14 +35,22 @@ def search():
         query = request.args.get('q', '')
         print(f"Received search query: {query}")
         
-        # Perform semantic search using MongoDB's vector search
+        # Create embedding for the query
+        response = openai_client.embeddings.create(
+            input=query,
+            model="text-embedding-ada-002"
+        )
+        query_embedding = response.data[0].embedding
+
+        # Perform semantic search using the embedding
         results = list(collection.aggregate([
             {
                 "$search": {
-                    "index": "vector_index1",  # Make sure this matches your index name
-                    "text": {
-                        "query": query,
-                        "path": ["Title", "Subtitle", "Content"]
+                    "index": "vector_index1",
+                    "knnBeta": {
+                        "vector": query_embedding,
+                        "path": "embedding",
+                        "k": 10
                     }
                 }
             },
@@ -51,9 +59,6 @@ def search():
                     "NodeId": 1, "Title": 1, "Content": 1, "Subtitle": 1,
                     "score": {"$meta": "searchScore"}
                 }
-            },
-            {
-                "$limit": 10
             }
         ]))
         
@@ -62,8 +67,7 @@ def search():
         return jsonify(results)
     except Exception as e:
         print(f"Search error: {e}")
-        return jsonify({"error": str(e)}), 500
-    
+        return jsonify({"error": str(e)}), 500    
     
 @app.route('/ai_explain', methods=['POST'])
 def ai_explain():
