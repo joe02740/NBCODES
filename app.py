@@ -43,10 +43,10 @@ def search():
         query_embedding = response.data[0].embedding
 
         # Perform semantic search using the embedding
-        results = list(collection.aggregate([
+        vector_results = list(collection.aggregate([
             {
                 "$vectorSearch": {
-                    "index": "vector_index1",  # Make sure this matches your index name
+                    "index": "vector_index1",
                     "path": "embedding",
                     "queryVector": query_embedding,
                     "numCandidates": 100,
@@ -61,15 +61,37 @@ def search():
             }
         ]))
         
-        print(f"Found {len(results)} results with vector search")
+        print(f"Found {len(vector_results)} results with vector search")
 
-        return jsonify(results)
+        # If no results from vector search, fall back to text search
+        if not vector_results:
+            text_results = list(collection.find(
+                {"$text": {"$search": query}},
+                {"NodeId": 1, "Title": 1, "Content": 1, "Subtitle": 1, "score": {"$meta": "textScore"}}
+            ).sort([("score", {"$meta": "textScore"})]).limit(10))
+            print(f"Found {len(text_results)} results with text search")
+            return jsonify(text_results)
+
+        return jsonify(vector_results)
     except Exception as e:
         print(f"Search error: {e}")
         return jsonify({"error": str(e)}), 500
 
-    
-        
+@app.route('/check_embeddings', methods=['GET'])
+def check_embeddings():
+    try:
+        total_docs = collection.count_documents({})
+        docs_with_embeddings = collection.count_documents({"embedding": {"$exists": True}})
+        return jsonify({
+            "total_documents": total_docs,
+            "documents_with_embeddings": docs_with_embeddings
+        })
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+
+
 @app.route('/ai_explain', methods=['POST'])
 def ai_explain():
     data = request.json
