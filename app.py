@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, render_template
 from flask_cors import CORS
 from pymongo import MongoClient
 import certifi
@@ -153,7 +153,6 @@ def test():
         print(f"Test error: {e}")
         return jsonify({"error": str(e)}), 500
 
-from flask import render_template
 
 @app.route('/table_of_contents', methods=['GET'])
 def get_table_of_contents():
