@@ -32,11 +32,12 @@ collection = db['NBCODES']
 def home():
     return "Hello, World!"
 
+
+
 @app.route('/search', methods=['GET'])
 def search():
     try:
         query = request.args.get('q', '')
-        print(f"Received search query: {query}")
 
         # Atlas Search
         atlas_results = list(collection.aggregate([
@@ -61,29 +62,22 @@ def search():
             {"$limit": 10}
         ]))
 
-        print(f"Atlas Search results: {json.dumps(atlas_results, default=json_util.default)}")
+        # Convert ObjectId to string for JSON serialization
+        for doc in atlas_results:
+            doc['_id'] = str(doc['_id'])
 
-        if atlas_results:
-            return jsonify(atlas_results)
-
-        # Fallback to simple text search if Atlas Search returns no results
-        simple_results = list(collection.find(
-            {"$text": {"$search": query}},
-            {"NodeId": 1, "Title": 1, "Subtitle": 1, "Content": 1, "score": {"$meta": "textScore"}}
-        ).sort([("score", {"$meta": "textScore"})]).limit(10))
-
-        print(f"Simple text search results: {json.dumps(simple_results, default=json_util.default)}")
-
-        return jsonify(simple_results)
+        return jsonify(atlas_results)
 
     except Exception as e:
-        print(f"Search error: {e}")
         return jsonify({"error": str(e)}), 500
+
+
+
+
 
 @app.route('/test_search', methods=['GET'])
 def test_search():
     try:
-        # Perform a simple find operation
         sample_docs = list(collection.find({}, {"NodeId": 1, "Title": 1, "Subtitle": 1, "Content": 1}).limit(5))
         
         # Convert ObjectId to string for JSON serialization
@@ -96,30 +90,6 @@ def test_search():
         })
     except Exception as e:
         return jsonify({"error": str(e)}), 500
-
-
-
-
-@app.route('/test_connection', methods=['GET'])
-def test_connection():
-    try:
-        # Test the connection and print database info
-        db_names = mongo_client.list_database_names()
-        collection_names = db.list_collection_names()
-        doc_count = collection.count_documents({})
-        
-        return jsonify({
-            "databases": db_names,
-            "collections": collection_names,
-            "document_count": doc_count
-        })
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
-
-
-
-
-
 
 
 
