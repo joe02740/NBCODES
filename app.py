@@ -25,7 +25,7 @@ openai_client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
 # MongoDB connection
 connection_string = os.getenv('MONGODB_URI')
 mongo_client = MongoClient(connection_string, tlsCAFile=certifi.where())
-db = mongo_client.wm
+db = mongo_client.NBCODES
 collection = db.NBCODES
 
 @app.route('/', methods=['GET'])
@@ -38,14 +38,14 @@ def search():
         query = request.args.get('q', '')
         print(f"Received search query: {query}")
 
-        # Attempt Atlas Search
-        atlas_results = list(collection.aggregate([
+        # Use the existing 'default' index for text search
+        results = list(collection.aggregate([
             {
                 "$search": {
                     "index": "default",
                     "text": {
                         "query": query,
-                        "path": {"wildcard": "*"}
+                        "path": {"wildcard": "*"}  # This will search all text fields
                     }
                 }
             },
@@ -63,27 +63,14 @@ def search():
             }
         ]))
 
-        print(f"Atlas Search results: {json.dumps(atlas_results, default=json_util.default)}")
-
-        # If Atlas Search returns no results, try a simple text search
-        if not atlas_results:
-            print("Atlas Search returned no results. Trying simple text search.")
-            simple_results = list(collection.find(
-                {"$text": {"$search": query}},
-                {"NodeId": 1, "Title": 1, "Content": 1, "Subtitle": 1, "score": {"$meta": "textScore"}}
-            ).sort([("score", {"$meta": "textScore"})]).limit(10))
-            
-            print(f"Simple text search results: {json.dumps(simple_results, default=json_util.default)}")
-            
-            if simple_results:
-                return jsonify(simple_results)
-
-        return jsonify(atlas_results)
+        print(f"Found {len(results)} results with text search")
+        return jsonify(results)
 
     except Exception as e:
         print(f"Search error: {e}")
         return jsonify({"error": str(e)}), 500
-
+    
+    
 @app.route('/test_connection', methods=['GET'])
 def test_connection():
     try:
