@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Table of Contents</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; padding: 20px; }
+        h1 { color: #333; }
+        ul { list-style-type: none; padding-left: 20px; }
+        a { color: #0066cc; text-decoration: none; }
+        a:hover { text-decoration: underline; }
+    </style>
+</head>
+<body>
+    <h1>Table of Contents</h1>
+    {% for chapter in toc %}
+        <h2>Chapter {{ chapter._id }}</h2>
+        <ul>
+        {% for section in chapter.sections %}
+            <li>
+                <h3>Section {{ section.Section }}</h3>
+                <ul>
+                {% for subsection in section.subsections %}
+                    <li>
+                        <h4>Subsection {{ subsection.Subsection }}</h4>
+                        <ul>
+                        {% for item in subsection.items %}
+                            <li><a href="/content/{{ item.NodeId }}">{{ item.Title }} {{ item.Subtitle }}</a></li>
+                        {% endfor %}
+                        </ul>
+                    </li>
+                {% endfor %}
+                </ul>
+            </li>
+        {% endfor %}
+        </ul>
+    {% endfor %}
+</body>
+</html>

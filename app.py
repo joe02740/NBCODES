@@ -38,39 +38,70 @@ def home():
 def search():
     try:
         query = request.args.get('q', '')
+        search_type = request.args.get('type', 'atlas')  # Default to Atlas search
 
-        # Atlas Search
-        atlas_results = list(collection.aggregate([
-            {
-                "$search": {
-                    "index": "default",
-                    "text": {
-                        "query": query,
-                        "path": ["Title", "Subtitle", "Content"]
+        if search_type == 'semantic':
+            # Create embedding for the query
+            response = openai_client.embeddings.create(
+                input=query,
+                model="text-embedding-ada-002"
+            )
+            query_embedding = response.data[0].embedding
+
+            # Perform semantic search using the embedding
+            results = list(collection.aggregate([
+                {
+                    "$search": {
+                        "knnBeta": {
+                            "vector": query_embedding,
+                            "path": "embedding",
+                            "k": 10
+                        }
+                    }
+                },
+                {
+                    "$project": {
+                        "NodeId": 1,
+                        "Title": 1,
+                        "Content": 1,
+                        "Subtitle": 1,
+                        "score": {"$meta": "searchScore"}
                     }
                 }
-            },
-            {
-                "$project": {
-                    "NodeId": 1,
-                    "Title": 1,
-                    "Subtitle": 1,
-                    "Content": 1,
-                    "score": {"$meta": "searchScore"}
-                }
-            },
-            {"$limit": 10}
-        ]))
+            ]))
+        else:
+            # Atlas Search
+            results = list(collection.aggregate([
+                {
+                    "$search": {
+                        "index": "default",
+                        "text": {
+                            "query": query,
+                            "path": ["Title", "Subtitle", "Content"]
+                        }
+                    }
+                },
+                {
+                    "$project": {
+                        "NodeId": 1,
+                        "Title": 1,
+                        "Subtitle": 1,
+                        "Content": 1,
+                        "score": {"$meta": "searchScore"}
+                    }
+                },
+                {"$limit": 10}
+            ]))
 
         # Convert ObjectId to string for JSON serialization
-        for doc in atlas_results:
+        for doc in results:
             doc['_id'] = str(doc['_id'])
 
-        return jsonify(atlas_results)
+        return jsonify(results)
 
     except Exception as e:
+        print(f"Search error: {e}")
         return jsonify({"error": str(e)}), 500
-
 
 
 
@@ -122,6 +153,8 @@ def test():
         print(f"Test error: {e}")
         return jsonify({"error": str(e)}), 500
 
+from flask import render_template
+
 @app.route('/table_of_contents', methods=['GET'])
 def get_table_of_contents():
     try:
@@ -163,10 +196,27 @@ def get_table_of_contents():
         ]
         
         toc = list(collection.aggregate(pipeline))
-        return jsonify(toc)
+        return render_template('table_of_contents.html', toc=toc)
     except Exception as e:
         print(f"Table of Contents error: {e}")
         return jsonify({"error": str(e)}), 500
+
+
+@app.route('/content/<node_id>')
+def get_content(node_id):
+    try:
+        document = collection.find_one({"NodeId": node_id})
+        if document:
+            return render_template('content.html', document=document)
+        else:
+            return "Content not found", 404
+    except Exception as e:
+        print(f"Content retrieval error: {e}")
+        return jsonify({"error": str(e)}), 500
+
+
+
+
 
 
 
