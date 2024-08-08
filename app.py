@@ -169,22 +169,6 @@ def get_table_of_contents():
 
 
 
-
-
-@app.route('/check_embeddings', methods=['GET'])
-def check_embeddings():
-    try:
-        doc_count = collection.count_documents({})
-        docs_with_embeddings = collection.count_documents({"embedding": {"$exists": True}})
-        return jsonify({
-            "total_documents": doc_count,
-            "documents_with_embeddings": docs_with_embeddings
-        })
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
-    
-
-
 @app.route('/chat', methods=['POST', 'OPTIONS'])
 def chat():
     if request.method == "OPTIONS":
