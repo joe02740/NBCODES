@@ -38,14 +38,14 @@ def search():
         query = request.args.get('q', '')
         print(f"Received search query: {query}")
 
-        # Use the existing 'default' index for text search
-        results = list(collection.aggregate([
+        # Atlas Search
+        atlas_results = list(collection.aggregate([
             {
                 "$search": {
                     "index": "default",
                     "text": {
                         "query": query,
-                        "path": {"wildcard": "*"}  # This will search all text fields
+                        "path": ["Title", "Subtitle", "Content"]
                     }
                 }
             },
@@ -53,24 +53,53 @@ def search():
                 "$project": {
                     "NodeId": 1,
                     "Title": 1,
-                    "Content": 1,
                     "Subtitle": 1,
+                    "Content": 1,
                     "score": {"$meta": "searchScore"}
                 }
             },
-            {
-                "$limit": 10
-            }
+            {"$limit": 10}
         ]))
 
-        print(f"Found {len(results)} results with text search")
-        return jsonify(results)
+        print(f"Atlas Search results: {json.dumps(atlas_results, default=json_util.default)}")
+
+        if atlas_results:
+            return jsonify(atlas_results)
+
+        # Fallback to simple text search if Atlas Search returns no results
+        simple_results = list(collection.find(
+            {"$text": {"$search": query}},
+            {"NodeId": 1, "Title": 1, "Subtitle": 1, "Content": 1, "score": {"$meta": "textScore"}}
+        ).sort([("score", {"$meta": "textScore"})]).limit(10))
+
+        print(f"Simple text search results: {json.dumps(simple_results, default=json_util.default)}")
+
+        return jsonify(simple_results)
 
     except Exception as e:
         print(f"Search error: {e}")
         return jsonify({"error": str(e)}), 500
-    
-    
+
+@app.route('/test_search', methods=['GET'])
+def test_search():
+    try:
+        # Perform a simple find operation
+        sample_docs = list(collection.find({}, {"NodeId": 1, "Title": 1, "Subtitle": 1, "Content": 1}).limit(5))
+        
+        # Convert ObjectId to string for JSON serialization
+        for doc in sample_docs:
+            doc['_id'] = str(doc['_id'])
+        
+        return jsonify({
+            "sample_docs": sample_docs,
+            "count": len(sample_docs)
+        })
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+
+
 @app.route('/test_connection', methods=['GET'])
 def test_connection():
     try:
