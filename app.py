@@ -25,7 +25,7 @@ openai_client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
 # MongoDB connection
 connection_string = os.getenv('MONGODB_URI')
 mongo_client = MongoClient(connection_string, tlsCAFile=certifi.where())
-db = mongo_client['WM']
+db = mongo_client['NBCODES']
 collection = db['NBCODES']
 
 @app.route('/', methods=['GET'])
