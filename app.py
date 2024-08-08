@@ -45,30 +45,31 @@ def search():
         # Perform semantic search using the embedding
         results = list(collection.aggregate([
             {
-                "$search": {
-                    "index": "vector_index1",
-                    "knnBeta": {
-                        "vector": query_embedding,
-                        "path": "embedding",
-                        "k": 10
-                    }
+                "$vectorSearch": {
+                    "index": "vector_index1",  # Make sure this matches your index name
+                    "path": "embedding",
+                    "queryVector": query_embedding,
+                    "numCandidates": 100,
+                    "limit": 10
                 }
             },
             {
                 "$project": {
                     "NodeId": 1, "Title": 1, "Content": 1, "Subtitle": 1,
-                    "score": {"$meta": "searchScore"}
+                    "score": {"$meta": "vectorSearchScore"}
                 }
             }
         ]))
         
-        print(f"Found {len(results)} results with semantic search")
+        print(f"Found {len(results)} results with vector search")
 
         return jsonify(results)
     except Exception as e:
         print(f"Search error: {e}")
-        return jsonify({"error": str(e)}), 500    
+        return jsonify({"error": str(e)}), 500
+
     
+        
 @app.route('/ai_explain', methods=['POST'])
 def ai_explain():
     data = request.json
