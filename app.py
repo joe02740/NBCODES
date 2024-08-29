@@ -1,5 +1,6 @@
 from flask import Flask, request, jsonify, render_template
 from flask_cors import CORS
+from flask import send_from_directory, redirect
 from pymongo import MongoClient
 import certifi
 import os
@@ -28,10 +29,18 @@ mongo_client = MongoClient(connection_string, tlsCAFile=certifi.where())
 db = mongo_client['NBCODES']
 collection = db['NBCODES']
 
-@app.route('/', methods=['GET'])
-def home():
-    return "Hello, World!"
 
+@app.route('/')
+def landing():
+    return send_from_directory('.', 'index.html')
+
+@app.route('/nbcodes')
+def nbcodes():
+    return redirect('/search')  # or wherever your main app starts
+
+@app.route('/weights-measures')
+def weights_measures():
+    return "Weights and Measures App (Under Construction)"
 
 
 @app.route('/search', methods=['GET'])
