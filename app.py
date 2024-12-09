@@ -1,7 +1,6 @@
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 import google.generativeai as genai
-import json
 import os
 from dotenv import load_dotenv
 
@@ -19,80 +18,47 @@ CORS(app, resources={
     }
 })
 
-# Initialize Gemini with specific parameters
+# Initialize Gemini
 genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
-generation_config = {
-    "temperature": 0.7,
-    "top_p": 0.8,
-    "top_k": 40,
-}
-model = genai.GenerativeModel("gemini-1.5-pro-001", generation_config=generation_config)
+model = genai.GenerativeModel("gemini-1.5-pro-001")
 
-def load_city_codes():
-    try:
-        with open('city_codes.json', 'r', encoding='cp1252') as file:
-            return json.load(file)
-    except Exception as e:
-        print(f"Error loading city codes: {e}")
-        return []
-
-city_codes = load_city_codes()
+# Load the entire city code text at startup
+print("Loading city codes...")
+try:
+    with open('city_codes.txt', 'r', encoding='utf-8') as f:
+        CITY_CODES = f.read()
+    print("City codes loaded successfully!")
+except Exception as e:
+    print(f"Error loading city codes: {e}")
+    CITY_CODES = None
 
 @app.route('/chat', methods=['POST', 'OPTIONS'])
 def chat():
     if request.method == "OPTIONS":
         return jsonify({"message": "OK"})
 
+    if not CITY_CODES:
+        return jsonify({
+            "error": "City codes not available",
+            "status": "error"
+        }), 500
+
     try:
         data = request.get_json()
-        user_message = data.get('message', '').lower()
-        
-        # Find relevant code sections
-        relevant_codes = []
-        keywords = user_message.split()
-        
-        for code in city_codes:
-            content = str(code.get('Content', '')).lower()
-            title = str(code.get('Title', '')).lower()
-            if any(keyword in content or keyword in title for keyword in keywords):
-                relevant_codes.append(code)
-        
-        relevant_codes = relevant_codes[:3]  # Limit to top 3 matches
-        
-        if not relevant_codes:
-            # No relevant codes found
-            response = model.generate_content(
-                f"I've searched the New Bedford City Codes but couldn't find any sections directly related to '{user_message}'. "
-                "Would you like to rephrase your question or ask about something else?"
-            )
-            return jsonify({"response": response.text, "status": "success"})
+        user_message = data.get('message', '')
 
-        # Format context more explicitly
-        formatted_context = "Here are the relevant sections of the New Bedford City Codes:\n\n"
-        for code in relevant_codes:
-            formatted_context += f"""SECTION REFERENCE:
-Chapter: {code.get('Chapter', 'N/A')}
-Section: {code.get('Section', 'N/A')}
-Title: {code.get('Title', 'N/A')}
-Content: {code.get('Content', 'N/A')}
--------------------\n"""
+        prompt = f"""You are a helpful AI assistant with direct access to the New Bedford City Codes. 
+Here are the complete city codes for reference:
 
-        prompt = f"""You are an expert on New Bedford City Codes helping a resident understand local regulations.
-Below are relevant sections from the official city codes. Please explain them in simple, everyday language.
+{CITY_CODES}
 
-{formatted_context}
+Based on these official city codes, please answer the following question:
+{user_message}
 
-User's Question: {user_message}
-
-Please provide:
-1. A clear explanation of what these codes mean in everyday language
-2. The main purpose of these regulations
-3. How they might apply to the user's situation
-
-If any part is unclear or if the codes don't fully address the question, please say so."""
+Remember: You have the complete New Bedford City Codes available to you in the text above. 
+Please provide a clear, everyday-language explanation based on these specific codes."""
 
         response = model.generate_content(prompt)
-        
         return jsonify({
             "response": response.text,
             "status": "success"
