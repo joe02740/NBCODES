@@ -6,7 +6,10 @@ from datetime import timedelta
 import pandas as pd
 
 app = Flask(__name__)
-CORS(app)
+CORS(app, resources={r"/*": {"origins": [
+    "https://nbcodes.netlify.app",
+    "http://localhost:3000"  # keep this for local development
+]}})
 
 # Initialize Gemini
 genai.configure(api_key=os.environ.get("GOOGLE_API_KEY"))
