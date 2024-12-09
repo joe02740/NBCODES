@@ -1,9 +1,7 @@
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 import google.generativeai as genai
-from google.generativeai import caching
-import pandas as pd
-import datetime
+import json
 import os
 from dotenv import load_dotenv
 
@@ -23,51 +21,35 @@ CORS(app, resources={
 
 # Initialize Gemini
 genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
+model = genai.GenerativeModel("gemini-1.5-pro-001")
 
 def load_city_codes():
-    """Load and format city codes for context"""
+    """Load city codes from JSON file with proper encoding"""
     try:
-        df = pd.read_csv('NewBedfordMACodeofOrdinancesEXPORT20240530.csv')
-        # Format the codes into a structured text
-        context_text = ""
-        for _, row in df.iterrows():
-            context_text += f"Chapter {row['Chapter']}, Section {row['Section']}: {row['Title']}\n"
-            context_text += f"Content: {row['Content']}\n\n"
-        return context_text
+        # Using the same encoding that worked for CSV conversion
+        with open('city_codes.json', 'r', encoding='cp1252') as file:
+            codes = json.load(file)
+            print(f"Successfully loaded {len(codes)} city code entries")
+            return codes
+    except UnicodeDecodeError:
+        print("Encoding error, trying UTF-8...")
+        try:
+            with open('city_codes.json', 'r', encoding='utf-8') as file:
+                codes = json.load(file)
+                print(f"Successfully loaded {len(codes)} city code entries")
+                return codes
+        except Exception as e:
+            print(f"Error loading with UTF-8: {e}")
+            return []
     except Exception as e:
-        print(f"Error loading CSV: {e}")
-        return None
+        print(f"Error loading city codes: {e}")
+        return []
 
-def initialize_context_cache():
-    """Initialize Gemini context cache with city codes"""
-    try:
-        city_codes = load_city_codes()
-        if not city_codes:
-            raise Exception("Failed to load city codes")
-
-        # Create a cache with a 24 hour TTL
-        cache = caching.CachedContent.create(
-            model='models/gemini-1.5-pro-001',
-            display_name='nb_city_codes',
-            system_instruction=(
-                'You are an expert on New Bedford City Codes. Your role is to help '
-                'users understand and navigate the city ordinances and regulations. '
-                'Provide clear, accurate explanations in everyday language.'
-            ),
-            contents=[city_codes],
-            ttl=datetime.timedelta(hours=24),
-        )
-        return cache
-    except Exception as e:
-        print(f"Error initializing context cache: {e}")
-        return None
-
-# Initialize the context cache when the app starts
-context_cache = initialize_context_cache()
-if context_cache:
-    model = genai.GenerativeModel.from_cached_content(cached_content=context_cache)
-else:
-    model = genai.GenerativeModel("gemini-1.5-pro-001")
+# Load city codes at startup
+print("Loading city codes...")
+city_codes = load_city_codes()
+if not city_codes:
+    print("Warning: No city codes were loaded!")
 
 @app.route('/chat', methods=['POST', 'OPTIONS'])
 def chat():
@@ -75,12 +57,43 @@ def chat():
         return jsonify({"message": "OK"})
 
     try:
+        if not city_codes:
+            return jsonify({
+                "error": "City codes database is not available",
+                "status": "error"
+            }), 500
+
         data = request.get_json()
         user_message = data.get('message', '')
         
-        response = model.generate_content(
-            f"Based on the New Bedford City Codes provided in the context, please answer: {user_message}"
+        # Simple keyword matching to find relevant sections
+        keywords = user_message.lower().split()
+        relevant_codes = []
+        
+        for code in city_codes:
+            content = str(code.get('Content', '')).lower()
+            title = str(code.get('Title', '')).lower()
+            if any(keyword in content or keyword in title for keyword in keywords):
+                relevant_codes.append(code)
+        
+        # Limit to 3 most relevant sections
+        relevant_codes = relevant_codes[:3]
+        
+        # Build context from relevant codes
+        context = "\n".join([
+            f"Chapter {code.get('Chapter', '')}, Section {code.get('Section', '')}: "
+            f"{code.get('Title', '')}\n{code.get('Content', '')}"
+            for code in relevant_codes
+        ])
+
+        prompt = (
+            f"Context from New Bedford City Codes:\n{context}\n\n"
+            f"User Question: {user_message}\n\n"
+            "Please explain the relevant city codes in clear, everyday language. "
+            "If the context doesn't directly answer the question, say so."
         )
+
+        response = model.generate_content(prompt)
         
         return jsonify({
             "response": response.text,
