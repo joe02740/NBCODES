@@ -19,37 +19,24 @@ CORS(app, resources={
     }
 })
 
-# Initialize Gemini
+# Initialize Gemini with specific parameters
 genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
-model = genai.GenerativeModel("gemini-1.5-pro-001")
+generation_config = {
+    "temperature": 0.7,
+    "top_p": 0.8,
+    "top_k": 40,
+}
+model = genai.GenerativeModel("gemini-1.5-pro-001", generation_config=generation_config)
 
 def load_city_codes():
-    """Load city codes from JSON file with proper encoding"""
     try:
-        # Using the same encoding that worked for CSV conversion
         with open('city_codes.json', 'r', encoding='cp1252') as file:
-            codes = json.load(file)
-            print(f"Successfully loaded {len(codes)} city code entries")
-            return codes
-    except UnicodeDecodeError:
-        print("Encoding error, trying UTF-8...")
-        try:
-            with open('city_codes.json', 'r', encoding='utf-8') as file:
-                codes = json.load(file)
-                print(f"Successfully loaded {len(codes)} city code entries")
-                return codes
-        except Exception as e:
-            print(f"Error loading with UTF-8: {e}")
-            return []
+            return json.load(file)
     except Exception as e:
         print(f"Error loading city codes: {e}")
         return []
 
-# Load city codes at startup
-print("Loading city codes...")
 city_codes = load_city_codes()
-if not city_codes:
-    print("Warning: No city codes were loaded!")
 
 @app.route('/chat', methods=['POST', 'OPTIONS'])
 def chat():
@@ -57,18 +44,12 @@ def chat():
         return jsonify({"message": "OK"})
 
     try:
-        if not city_codes:
-            return jsonify({
-                "error": "City codes database is not available",
-                "status": "error"
-            }), 500
-
         data = request.get_json()
-        user_message = data.get('message', '')
+        user_message = data.get('message', '').lower()
         
-        # Simple keyword matching to find relevant sections
-        keywords = user_message.lower().split()
+        # Find relevant code sections
         relevant_codes = []
+        keywords = user_message.split()
         
         for code in city_codes:
             content = str(code.get('Content', '')).lower()
@@ -76,22 +57,39 @@ def chat():
             if any(keyword in content or keyword in title for keyword in keywords):
                 relevant_codes.append(code)
         
-        # Limit to 3 most relevant sections
-        relevant_codes = relevant_codes[:3]
+        relevant_codes = relevant_codes[:3]  # Limit to top 3 matches
         
-        # Build context from relevant codes
-        context = "\n".join([
-            f"Chapter {code.get('Chapter', '')}, Section {code.get('Section', '')}: "
-            f"{code.get('Title', '')}\n{code.get('Content', '')}"
-            for code in relevant_codes
-        ])
+        if not relevant_codes:
+            # No relevant codes found
+            response = model.generate_content(
+                f"I've searched the New Bedford City Codes but couldn't find any sections directly related to '{user_message}'. "
+                "Would you like to rephrase your question or ask about something else?"
+            )
+            return jsonify({"response": response.text, "status": "success"})
 
-        prompt = (
-            f"Context from New Bedford City Codes:\n{context}\n\n"
-            f"User Question: {user_message}\n\n"
-            "Please explain the relevant city codes in clear, everyday language. "
-            "If the context doesn't directly answer the question, say so."
-        )
+        # Format context more explicitly
+        formatted_context = "Here are the relevant sections of the New Bedford City Codes:\n\n"
+        for code in relevant_codes:
+            formatted_context += f"""SECTION REFERENCE:
+Chapter: {code.get('Chapter', 'N/A')}
+Section: {code.get('Section', 'N/A')}
+Title: {code.get('Title', 'N/A')}
+Content: {code.get('Content', 'N/A')}
+-------------------\n"""
+
+        prompt = f"""You are an expert on New Bedford City Codes helping a resident understand local regulations.
+Below are relevant sections from the official city codes. Please explain them in simple, everyday language.
+
+{formatted_context}
+
+User's Question: {user_message}
+
+Please provide:
+1. A clear explanation of what these codes mean in everyday language
+2. The main purpose of these regulations
+3. How they might apply to the user's situation
+
+If any part is unclear or if the codes don't fully address the question, please say so."""
 
         response = model.generate_content(prompt)
         
