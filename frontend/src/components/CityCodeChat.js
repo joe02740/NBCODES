@@ -2,11 +2,13 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Send, Loader2 } from 'lucide-react';
 
 const CityCodeChat = () => {
-  const [messages, setMessages] = useState([]);
+  const [messages, setMessages] = useState([{
+    text: "Welcome to the New Bedford City Codes Search Tool. Ask any question about city regulations and ordinances.",
+    sender: 'ai'
+  }]);
   const [inputMessage, setInputMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const messagesEndRef = useRef(null);
-  const chatContainerRef = useRef(null);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -50,71 +52,63 @@ const CityCodeChat = () => {
   };
 
   return (
-    <div className="flex flex-col h-[600px] bg-white rounded-lg shadow-lg overflow-hidden">
-      {/* Chat Messages */}
-      <div 
-        ref={chatContainerRef}
-        className="flex-1 overflow-y-auto p-4 space-y-4"
-      >
-        {messages.map((msg, index) => (
-          <div
-            key={index}
-            className={`flex ${msg.sender === 'user' ? 'justify-end' : 'justify-start'}`}
-          >
+    <div className="w-full max-w-4xl mx-auto mt-8">
+      <div className="bg-white rounded-lg shadow-lg">
+        {/* Chat Messages */}
+        <div className="h-[400px] overflow-y-auto p-4 space-y-4">
+          {messages.map((msg, index) => (
             <div
-              className={`max-w-[70%] rounded-lg px-4 py-2 ${
-                msg.sender === 'user'
-                  ? 'bg-blue-500 text-white'
-                  : msg.sender === 'error'
-                  ? 'bg-red-100 text-red-700'
-                  : 'bg-gray-100 text-gray-800'
-              }`}
+              key={index}
+              className={`flex ${msg.sender === 'user' ? 'justify-end' : 'justify-start'}`}
             >
-              <p className="whitespace-pre-wrap">{msg.text}</p>
+              <div
+                className={`max-w-[70%] rounded-lg px-4 py-2 ${
+                  msg.sender === 'user'
+                    ? 'bg-[#0046AD] text-white'  // Using your brand blue
+                    : msg.sender === 'error'
+                    ? 'bg-red-100 text-red-700'
+                    : 'bg-gray-100 text-gray-800'
+                }`}
+              >
+                <p className="whitespace-pre-wrap">{msg.text}</p>
+              </div>
             </div>
-          </div>
-        ))}
-        {isLoading && (
-          <div className="flex justify-start">
-            <div className="bg-gray-100 rounded-lg px-4 py-2">
-              <Loader2 className="w-5 h-5 animate-spin text-gray-500" />
+          ))}
+          {isLoading && (
+            <div className="flex justify-start">
+              <div className="bg-gray-100 rounded-lg px-4 py-2">
+                <Loader2 className="w-5 h-5 animate-spin text-gray-500" />
+              </div>
             </div>
-          </div>
-        )}
-        <div ref={messagesEndRef} />
-      </div>
-
-      {/* Input Form */}
-      <form 
-        onSubmit={handleSubmit}
-        className="p-4 border-t border-gray-200 bg-white"
-      >
-        <div className="flex space-x-2">
-          <input
-            type="text"
-            value={inputMessage}
-            onChange={(e) => setInputMessage(e.target.value)}
-            placeholder="Ask about New Bedford City Codes..."
-            className="flex-1 rounded-lg border border-gray-300 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-            disabled={isLoading}
-          />
-          <button
-            type="submit"
-            disabled={isLoading || !inputMessage.trim()}
-            className={`rounded-lg px-4 py-2 bg-blue-500 text-white flex items-center justify-center ${
-              isLoading || !inputMessage.trim() 
-                ? 'opacity-50 cursor-not-allowed' 
-                : 'hover:bg-blue-600'
-            }`}
-          >
-            {isLoading ? (
-              <Loader2 className="w-5 h-5 animate-spin" />
-            ) : (
-              <Send className="w-5 h-5" />
-            )}
-          </button>
+          )}
+          <div ref={messagesEndRef} />
         </div>
-      </form>
+
+        {/* Input Form */}
+        <div className="border-t border-gray-200 p-4">
+          <form onSubmit={handleSubmit} className="search-form">
+            <input
+              type="text"
+              value={inputMessage}
+              onChange={(e) => setInputMessage(e.target.value)}
+              placeholder="Ask about New Bedford City Codes..."
+              className="flex-1 w-full px-4 py-2 border border-gray-300 rounded-l-lg focus:outline-none focus:ring-2 focus:ring-[#0046AD]"
+              disabled={isLoading}
+            />
+            <button
+              type="submit"
+              disabled={isLoading || !inputMessage.trim()}
+              className="search-button bg-[#39B54A]"  // Using your brand green
+            >
+              {isLoading ? (
+                <Loader2 className="w-5 h-5 animate-spin" />
+              ) : (
+                <Send className="w-5 h-5" />
+              )}
+            </button>
+          </form>
+        </div>
+      </div>
     </div>
   );
 };
